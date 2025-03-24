@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Canciones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .search-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .song-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .song-item:hover {
+            background-color: #f0f0f0;
+        }
+        .song-item.selected {
+            background-color: #e3f2fd;
+        }
+        .song-item:last-child {
+            border-bottom: none;
+        }
+        .song-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .song-info p {
+            margin: 5px 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .song-info strong {
+            color: #333;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+        }
+        #recommendButton {
+            margin-top: 10px;
+            display: none;
+        }
+        .similarity-bar {
+            height: 4px;
+            background-color: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 5px;
+        }
+        .similarity-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <h1>Buscador de Canciones</h1>
+        <div class="form-group">
+            <input type="text" id="songName" placeholder="Nombre de la canción" required>
+            <button onclick="searchSong()">Buscar</button>
+        </div>
+    </div>
+
+    <div id="songResult" class="result-container" style="display: none;">
+        <h2>Versiones Encontradas</h2>
+        <div id="songsList"></div>
+        <button id="recommendButton" onclick="getRecommendations()">Ver Recomendaciones</button>
+    </div>
+
+    <div id="recommendationsResult" class="result-container" style="display: none;">
+        <h2>Canciones Recomendadas</h2>
+        <div id="recommendationsList"></div>
+    </div>
+
+    <script>
+        let currentSongIndex = null;
+
+        async function searchSong() {
+            const name = document.getElementById('songName').value;
+            
+            if (!name) {
+                alert('Por favor, introduce el nombre de una canción');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:5000/api/find-song', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name: name })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Canción no encontrada');
+                }
+
+                const songs = await response.json();
+                displaySongs(songs);
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        function formatDuration(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const seconds = ((ms % 60000) / 1000).toFixed(1);
+            return `${minutes}:${seconds.padStart(4, '0')}`;
+        }
+
+        function displaySongs(songs) {
+            const songsList = document.getElementById('songsList');
+            songsList.innerHTML = songs.map((song, idx) => `
+                <div class="song-item" onclick="selectSong(${song.index}, this)">
+                    <h3>${song.name}</h3>
+                    <p>Artista: ${song.artists}</p>
+                    <div class="song-info">
+                        <p><strong>Año:</strong> ${song.year}</p>
+                        <p><strong>Popularidad:</strong> ${song.popularity.toFixed(1)}%</p>
+                        <p><strong>Duración:</strong> ${formatDuration(song.duration_ms)}</p>
+                        <p><strong>Volumen:</strong> ${song.loudness.toFixed(1)} dB</p>
+                        <p><strong>Tempo:</strong> ${song.tempo.toFixed(1)} BPM</p>
+                        <p><strong>Bailabilidad:</strong> ${(song.danceability * 100).toFixed(1)}%</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('songResult').style.display = 'block';
+            document.getElementById('recommendButton').style.display = 'none';
+            document.getElementById('recommendationsResult').style.display = 'none';
+            currentSongIndex = null;
+        }
+
+        function selectSong(index, element) {
+            // Remover selección previa
+            const previousSelected = document.querySelector('.song-item.selected');
+            if (previousSelected) {
+                previousSelected.classList.remove('selected');
+            }
+            
+            // Seleccionar nueva canción
+            element.classList.add('selected');
+            currentSongIndex = index;
+            
+            // Mostrar botón de recomendaciones
+            document.getElementById('recommendButton').style.display = 'block';
+        }
+
+        async function getRecommendations() {
+            if (currentSongIndex === null) {
+                alert('Por favor, selecciona una canción');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:5000/api/get-recommendations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ song_idx: currentSongIndex })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al obtener recomendaciones');
+                }
+
+                const recommendations = await response.json();
+                displayRecommendations(recommendations);
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        function displayRecommendations(recommendations) {
+            const recommendationsList = document.getElementById('recommendationsList');
+            recommendationsList.innerHTML = recommendations.map((song, index) => {
+                const similarity = (1 - song.distance) * 100;
+                return `
+                    <div class="song-item">
+                        <h3>${index + 1}. ${song.name}</h3>
+                        <p>Artista: ${song.artists}</p>
+                        <div class="song-info">
+                            <p><strong>Año:</strong> ${song.year}</p>
+                            <p><strong>Popularidad:</strong> ${song.popularity.toFixed(1)}%</p>
+                            <p><strong>Duración:</strong> ${formatDuration(song.duration_ms)}</p>
+                            <p><strong>Volumen:</strong> ${song.loudness.toFixed(1)} dB</p>
+                            <p><strong>Tempo:</strong> ${song.tempo.toFixed(1)} BPM</p>
+                            <p><strong>Bailabilidad:</strong> ${(song.danceability * 100).toFixed(1)}%</p>
+                        </div>
+                        <p><strong>Similitud:</strong> ${similarity.toFixed(1)}%</p>
+                        <div class="similarity-bar">
+                            <div class="similarity-fill" style="width: ${similarity}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('recommendationsResult').style.display = 'block';
+        }
+    </script>
+</body>
+</html> 

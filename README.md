@@ -1,105 +1,56 @@
-# SongRecommender
+# SongRecommender 🎵
 
-Este proyecto implementa un sistema de recomendación de canciones utilizando el algoritmo KNN (K-Nearest Neighbors) y clustering. El sistema permite buscar canciones y obtener recomendaciones basadas en características musicales como tempo, bailabilidad, volumen, etc.
+Content-based song recommender built on Spotify audio features. Search for a song and get similar tracks based on how they *sound* — tempo, danceability, acousticness, energy-related features — rather than on what other users listened to.
 
-## Características
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=flat&logo=flask&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikit-learn&logoColor=white)
+![pandas](https://img.shields.io/badge/pandas-150458?style=flat&logo=pandas&logoColor=white)
 
-- Búsqueda de canciones por nombre
-- Visualización detallada de características musicales
-- Sistema de recomendación basado en KNN
-- Clustering de canciones para mejorar la precisión y velocidad de las recomendaciones
-- Interfaz web intuitiva y responsive
+## How it works
 
-## Tecnologías Utilizadas
+1. **Cleaning & normalisation** (`data/limpieza_datos.ipynb`) — removes nulls and duplicates from the Spotify dataset, scales numeric features to [0, 1] and keeps the original values for display.
+2. **Clustering** — K-Means groups the catalogue into 100 clusters of acoustically similar songs.
+3. **Nearest neighbours** — for a query song, a k-NN model (Euclidean distance) is built only inside its cluster and returns the 5 closest tracks. Restricting the search to one cluster keeps queries fast and recommendations relevant.
 
-- Python 3.x
-- Flask (Backend)
-- Pandas (Procesamiento de datos)
-- Scikit-learn (Machine Learning)
-- HTML/CSS/JavaScript (Frontend)
+Features used: year, popularity, duration, loudness, tempo, danceability, acousticness, instrumentalness, liveness and speechiness.
 
-## Instalación
-
-1. Clona el repositorio:
-```bash
-git clone https://github.com/tu-usuario/SongRecommender.git
-cd SongRecommender
-```
-
-2. Instala las dependencias:
-```bash
-pip install -r requirements.txt
-```
-
-3. Asegúrate de tener el archivo de datos procesados en la carpeta `data/datos_procesados.csv`
-
-## Uso
-
-1. Inicia el servidor Flask:
-```bash
-cd backend
-python app_flask.py
-```
-
-2. Abre el archivo `frontend/index.html` en tu navegador
-
-3. Busca una canción y obtén recomendaciones basadas en sus características musicales
-
-## Estructura del Proyecto
+## Project structure
 
 ```
 SongRecommender/
 ├── backend/
-│   ├── app_flask.py
-│   └── recommender.py
+│   ├── app_flask.py        # REST API (find song, get recommendations)
+│   ├── recommender.py      # clustering + k-NN logic
+│   └── requirements.txt
 ├── frontend/
-│   └── index.html
-├── data/
-│   ├── limpieza_datos.ipynb
-│   └── datos_procesados.csv
-└── requirements.txt
+│   └── index.html          # single-page search UI
+└── data/
+    ├── limpieza_datos.ipynb  # cleaning and clustering notebook
+    ├── spotify.arff          # raw dataset
+    └── datos_procesados.csv  # processed dataset used by the API
 ```
 
-## Proceso de Datos
+## Getting started
 
-### Limpieza y Preprocesamiento
-El sistema incluye un proceso de limpieza de datos (`limpieza_datos.ipynb`) que:
-- Elimina valores nulos y duplicados
-- Normaliza las características numéricas
-- Preserva los valores originales para visualización
-- Aplica clustering para agrupar canciones similares
+```bash
+git clone https://github.com/roicaride/SongRecommender.git
+cd SongRecommender
+pip install -r backend/requirements.txt
 
-### Clustering
-Para mejorar la eficiencia y precisión de las recomendaciones:
-- Las canciones se agrupan en clusters basados en sus características musicales
-- Las recomendaciones se buscan solo dentro del mismo cluster
-- Esto reduce significativamente el tiempo de búsqueda y mejora la relevancia de las recomendaciones
+cd backend
+python app_flask.py
+```
 
-## Características Musicales
+Then open `frontend/index.html` in your browser, search for a song and get recommendations.
 
-El sistema utiliza las siguientes características para las recomendaciones:
-- Año de lanzamiento
-- Popularidad
-- Duración (duration_ms)
-- Volumen (loudness)
-- Tempo (BPM)
-- Bailabilidad (danceability)
-- Acústica (acousticness)
-- Instrumentalidad (instrumentalness)
-- En vivo (liveness)
-- Habla (speechiness)
+### API
 
-Cada característica aporta una dimensión única a la similitud entre canciones:
-- **Bailabilidad**: Mide qué tan adecuada es la canción para bailar
-- **Acústica**: Indica qué tan acústica es la canción
-- **Instrumentalidad**: Mide la ausencia de voces
-- **En vivo**: Indica la probabilidad de que la canción sea en vivo
-- **Habla**: Mide la presencia de palabras habladas
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/find-song` | Look up a song by name |
+| `POST` | `/api/get-recommendations` | Return the 5 most similar songs |
 
-## Contribuir
+## License
 
-Las contribuciones son bienvenidas. Por favor, abre un issue primero para discutir los cambios que te gustaría hacer.
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles. 
+MIT — see [LICENSE](LICENSE).
